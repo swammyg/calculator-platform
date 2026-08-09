@@ -1,0 +1,7 @@
+environment          = "prod"
+route53_zone_id      = "Z0123456789ABCDEF"
+vpc_id               = "vpc-0123456789abcdef0"
+public_subnet_ids    = ["subnet-aaaaaaaa", "subnet-bbbbbbbb"]
+private_subnet_ids   = ["subnet-cccccccc", "subnet-dddddddd"]
+backend_image        = "123456789012.dkr.ecr.eu-west-2.amazonaws.com/calculator-api:release"
+frontend_image       = "123456789012.dkr.ecr.eu-west-2.amazonaws.com/calculator-web:release"

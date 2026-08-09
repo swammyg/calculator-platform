@@ -1,0 +1,2 @@
+import { UKSalaryTaxCalculator } from "../../components/calculators/UKSalaryTaxCalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function UKSalaryTaxPage(): JSX.Element { return <CalculatorFeaturePage title="UK Salary & Tax Calculator" description="Estimate take-home pay, tax, National Insurance, pension, and student-loan deductions." disclaimer="This simplified 2024/25 estimate is not tax advice. Confirm PAYE and pension treatment with HMRC or a qualified adviser."><UKSalaryTaxCalculator /></CalculatorFeaturePage>; }

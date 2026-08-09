@@ -1,0 +1,2 @@
+import { BMICalculator } from "../../components/calculators/BMICalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function BMIPage(): JSX.Element { return <CalculatorFeaturePage title="BMI Calculator" description="Calculate body mass index and its standard category." disclaimer="BMI is a screening indicator, not a diagnosis. Speak to a healthcare professional for personal advice."><BMICalculator /></CalculatorFeaturePage>; }

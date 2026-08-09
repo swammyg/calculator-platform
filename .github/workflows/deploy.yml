@@ -1,0 +1,11 @@
+name: Deploy Kalko production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-production.yml
+    secrets: inherit

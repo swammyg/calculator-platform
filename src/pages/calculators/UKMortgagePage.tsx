@@ -1,0 +1,2 @@
+import { UKMortgageCalculator } from "../../components/calculators/UKMortgageCalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function UKMortgagePage(): JSX.Element { return <CalculatorFeaturePage title="UK Mortgage Calculator" description="See monthly repayment, stamp duty, and ongoing ownership costs." disclaimer="Mortgage estimates exclude lender fees and affordability checks. Your rate and actual payments may differ."><UKMortgageCalculator /></CalculatorFeaturePage>; }

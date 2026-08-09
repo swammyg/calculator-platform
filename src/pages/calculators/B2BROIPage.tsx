@@ -1,0 +1,2 @@
+import { B2BROICalculator } from "../../components/calculators/B2BROICalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function B2BROIPage(): JSX.Element { return <CalculatorFeaturePage title="B2B ROI Calculator" description="Assess annual benefits, break-even, and three- and five-year projections." disclaimer="Forecasts depend on assumptions and do not guarantee commercial outcomes. Review with your finance team."><B2BROICalculator /></CalculatorFeaturePage>; }

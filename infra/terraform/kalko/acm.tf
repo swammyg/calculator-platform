@@ -1,0 +1,3 @@
+resource "aws_acm_certificate" "main" { domain_name = var.domain_name; subject_alternative_names = ["*.${var.domain_name}"]; validation_method = "DNS" }
+resource "aws_route53_record" "validation" { for_each = { for d in aws_acm_certificate.main.domain_validation_options : d.domain_name => d }; zone_id = aws_route53_zone.main.zone_id; name = each.value.resource_record_name; type = each.value.resource_record_type; records = [each.value.resource_record_value]; ttl = 60 }
+resource "aws_acm_certificate_validation" "main" { certificate_arn = aws_acm_certificate.main.arn; validation_record_fqdns = [for r in aws_route53_record.validation : r.fqdn] }

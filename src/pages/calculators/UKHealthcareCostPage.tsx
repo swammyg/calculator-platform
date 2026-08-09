@@ -1,0 +1,2 @@
+import { UKHealthcareCostCalculator } from "../../components/calculators/UKHealthcareCostCalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function UKHealthcareCostPage(): JSX.Element { return <CalculatorFeaturePage title="UK Healthcare Cost Calculator" description="Compare indicative NHS and private treatment costs and time-off impact." disclaimer="Healthcare costs and clinical choices must be confirmed with providers. This tool is not medical advice."><UKHealthcareCostCalculator /></CalculatorFeaturePage>; }

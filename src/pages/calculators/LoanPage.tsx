@@ -1,0 +1,2 @@
+import { LoanCalculator } from "../../components/calculators/LoanCalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function LoanPage(): JSX.Element { return <CalculatorFeaturePage title="Loan Calculator" description="Calculate fixed-rate monthly repayment and total interest." disclaimer="This repayment estimate does not include fees, insurance, or changes to a variable rate."><LoanCalculator /></CalculatorFeaturePage>; }

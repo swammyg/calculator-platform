@@ -1,0 +1,2 @@
+import { BodyFatCalculator } from "../../components/calculators/BodyFatCalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function BodyFatPage(): JSX.Element { return <CalculatorFeaturePage title="Body Fat Calculator" description="Estimate body-fat percentage and lean mass with the Navy method." disclaimer="Circumference estimates are approximate and do not replace clinical assessment."><BodyFatCalculator /></CalculatorFeaturePage>; }

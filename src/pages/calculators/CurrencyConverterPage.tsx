@@ -1,0 +1,2 @@
+import { CurrencyConverter } from "../../components/calculators/CurrencyConverter"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function CurrencyConverterPage(): JSX.Element { return <CalculatorFeaturePage title="Currency Converter" description="Convert currencies with the backend's indicative bundled rates." disclaimer="Rates are indicative and delayed; do not use this result to make a trading or payment decision."><CurrencyConverter /></CalculatorFeaturePage>; }

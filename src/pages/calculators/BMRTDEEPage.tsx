@@ -1,0 +1,2 @@
+import { BMRTDEECalculator } from "../../components/calculators/BMRTDEECalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function BMRTDEEPage(): JSX.Element { return <CalculatorFeaturePage title="BMR & TDEE Calculator" description="Estimate daily calorie needs from your body measurements and activity." disclaimer="Calorie estimates are general guidance, not medical or nutritional advice."><BMRTDEECalculator /></CalculatorFeaturePage>; }

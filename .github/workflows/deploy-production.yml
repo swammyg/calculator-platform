@@ -1,0 +1,197 @@
+name: Deploy calculator platform
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: calculator-platform-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+  FRONTEND_BUCKET: ${{ vars.FRONTEND_BUCKET }}
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+  APP_URL: ${{ vars.APP_URL }}
+
+jobs:
+  test:
+    name: Test backend and frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install backend test dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
+      - name: Run backend tests with 90% coverage gate
+        run: python -m pytest -q --cov=app --cov-report=term-missing --cov-fail-under=90
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install and build frontend
+        run: npm ci && npm run build
+      - name: Install Chromium for end-to-end tests
+        run: npx playwright install --with-deps chromium
+      - name: Run desktop and mobile end-to-end tests
+        run: npm run test:e2e
+      - name: Upload frontend bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
+
+  build:
+    name: Build and publish API image
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      api_image: ${{ steps.image.outputs.api_image }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: calculator-platform-build
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and push immutable API image
+        id: image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker buildx build --platform linux/amd64 --push --tag "$IMAGE" .
+          echo "api_image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy and verify production
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: calculator-platform-deploy
+      - name: Validate deployment configuration
+        run: |
+          for value in AWS_REGION ECR_REPOSITORY ECS_CLUSTER ECS_SERVICE FRONTEND_BUCKET CLOUDFRONT_DISTRIBUTION_ID APP_URL; do
+            test -n "${!value}" || { echo "Repository variable $value is required"; exit 1; }
+          done
+      - name: Capture active task definition for rollback
+        run: |
+          PREVIOUS_TASK_DEFINITION=$(aws ecs describe-services --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE" --query 'services[0].taskDefinition' --output text)
+          test "$PREVIOUS_TASK_DEFINITION" != "None"
+          echo "PREVIOUS_TASK_DEFINITION=$PREVIOUS_TASK_DEFINITION" >> "$GITHUB_ENV"
+      - name: Publish frontend and invalidate CDN
+        run: |
+          aws s3 sync dist "s3://$FRONTEND_BUCKET" --delete --cache-control 'public,max-age=86400'
+          aws cloudfront create-invalidation --distribution-id "$CLOUDFRONT_DISTRIBUTION_ID" --paths '/*'
+      - name: Register API task definition revision
+        env:
+          API_IMAGE: ${{ needs.build.outputs.api_image }}
+        run: |
+          aws ecs describe-task-definition --task-definition "$PREVIOUS_TASK_DEFINITION" --query taskDefinition > task-definition.json
+          jq --arg image "$API_IMAGE" '
+            del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+            | .containerDefinitions |= map(if .name == "api" then .image = $image else . end)
+          ' task-definition.json > task-definition.next.json
+          DEPLOYED_TASK_DEFINITION=$(aws ecs register-task-definition --cli-input-json file://task-definition.next.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "DEPLOYED_TASK_DEFINITION=$DEPLOYED_TASK_DEFINITION" >> "$GITHUB_ENV"
+      - name: Update ECS service and wait for stability
+        run: |
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" --task-definition "$DEPLOYED_TASK_DEFINITION" --force-new-deployment >/dev/null
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE"
+      - name: Run health and endpoint smoke tests
+        run: |
+          set -euo pipefail
+          api="${APP_URL%/}"
+          curl --fail --show-error --retry 12 --retry-all-errors --retry-delay 5 "$api/api/v1/health" | jq -e '.result.status == "ok"' >/dev/null
+          smoke() { curl --fail --show-error --retry 3 --retry-all-errors --retry-delay 2 -X POST "$api$1" -H 'Content-Type: application/json' --data "$2" | jq -e '.result != null' >/dev/null; }
+          smoke /api/v1/calculators/uk-salary-tax '{"annual_salary_gbp":50000}'
+          smoke /api/v1/calculators/uk-mortgage '{"property_price_gbp":300000,"deposit_gbp":60000,"interest_rate_percent":4.5,"term_years":25,"property_tax_annual_gbp":1800,"insurance_annual_gbp":300}'
+          smoke /api/v1/calculators/uk-pension '{"current_age":35,"retirement_age":67,"current_salary_gbp":55000,"current_pension_pot_gbp":40000,"annual_contribution_gbp":4000,"employer_contribution_pct":5}'
+          smoke /api/v1/calculators/uk-personal-finance '{"monthly_income_gbp":4000,"essential_expenses_gbp":1800,"discretionary_spending_gbp":600,"savings_goal_gbp":30000}'
+          smoke /api/v1/calculators/b2b-roi '{"project_investment_gbp":10000,"annual_revenue_increase_gbp":9000,"cost_savings_annual_gbp":3000,"payback_period_months":12}'
+          smoke /api/v1/calculators/uk-healthcare-cost '{"procedure_type":"cataract_surgery_private","recovery_weeks":4,"time_off_work_weeks":2,"weekly_income_gbp":800}'
+          smoke /api/v1/calculators/bmi '{"weight_kg":70,"height_cm":175,"age":30,"gender":"male"}'
+          smoke /api/v1/calculators/bmr-tdee '{"weight_kg":70,"height_cm":175,"age":30,"gender":"male","activity_level":"moderate"}'
+          smoke /api/v1/calculators/body-fat '{"weight_kg":70,"height_cm":175,"age":30,"gender":"male","neck_cm":38,"waist_cm":84}'
+          smoke /api/v1/calculators/loan '{"principal_usd":10000,"annual_rate_percent":5,"term_months":36}'
+          smoke /api/v1/calculators/currency-converter '{"amount":100,"from_currency":"GBP","to_currency":"USD"}'
+          smoke /api/v1/tools/time/timezone-converter '{"source_timezone":"America/New_York","target_timezone":"Europe/London","date_time":"2026-08-07T14:30:00-04:00"}'
+          smoke /api/v1/tools/time/age-calculator '{"birthdate":"1990-05-15"}'
+          smoke /api/v1/tools/time/countdown-timer '{"target_date":"2030-01-01T00:00:00Z","event_name":"New Year","timezone":"Europe/London"}'
+          smoke /api/v1/tools/seo/word-counter '{"text":"This sample text contains enough words to validate the deployed word counter endpoint correctly today."}'
+          smoke /api/v1/tools/seo/readability-score '{"text":"This sample text contains enough words to validate the deployed readability endpoint correctly today."}'
+          smoke /api/v1/tools/seo/keyword-density '{"text":"This sample text contains enough words to validate the deployed keyword density endpoint correctly today.","focus_keyword":"sample text"}'
+      - name: Write deployment report
+        if: always()
+        run: |
+          {
+            echo '# Production deployment report'
+            echo "- Commit: $GITHUB_SHA"
+            echo "- API image: ${{ needs.build.outputs.api_image }}"
+            echo "- Previous task definition: ${PREVIOUS_TASK_DEFINITION:-not-captured}"
+            echo "- Deployed task definition: ${DEPLOYED_TASK_DEFINITION:-not-registered}"
+            echo "- Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > deployment-report.md
+          cat deployment-report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload deployment report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-report
+          path: deployment-report.md
+          retention-days: 30
+      - name: Roll back ECS service after a failed deployment or smoke test
+        if: failure() && env.PREVIOUS_TASK_DEFINITION != ''
+        run: |
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" --task-definition "$PREVIOUS_TASK_DEFINITION" --force-new-deployment >/dev/null
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE"
+
+  notify:
+    name: Notify Slack
+    if: always()
+    needs: [test, build, deploy]
+    runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - name: Send deployment status to Slack
+        if: env.SLACK_WEBHOOK_URL != ''
+        env:
+          OVERALL_STATUS: ${{ needs.deploy.result == 'success' && 'success' || 'failure' }}
+        run: |
+          payload=$(jq -n --arg status "$OVERALL_STATUS" --arg sha "$GITHUB_SHA" --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" '{text: ("Calculator platform deployment " + $status + "\nCommit: " + $sha + "\nRun: " + $url)}')
+          curl --fail --show-error -X POST -H 'Content-Type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL"

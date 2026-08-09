@@ -1,0 +1,2 @@
+import { UKPensionCalculator } from "../../components/calculators/UKPensionCalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function UKPensionPage(): JSX.Element { return <CalculatorFeaturePage title="UK Pension Calculator" description="Project your pension pot, tax-free lump sum, and retirement income." disclaimer="Investment returns, inflation, tax rules, and State Pension eligibility can change. This is not financial advice."><UKPensionCalculator /></CalculatorFeaturePage>; }

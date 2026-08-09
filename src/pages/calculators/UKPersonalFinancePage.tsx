@@ -1,0 +1,2 @@
+import { UKPersonalFinanceCalculator } from "../../components/calculators/UKPersonalFinanceCalculator"; import { CalculatorFeaturePage } from "./CalculatorFeaturePage";
+export function UKPersonalFinancePage(): JSX.Element { return <CalculatorFeaturePage title="UK Personal Finance Calculator" description="Plan monthly spending and savings with a 50/30/20 benchmark." disclaimer="This is a budgeting guide, not regulated financial advice. Adjust any target to your circumstances."><UKPersonalFinanceCalculator /></CalculatorFeaturePage>; }
