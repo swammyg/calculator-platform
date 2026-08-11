@@ -168,3 +168,39 @@ class CurrencyConverterRequest(BaseModel):
 
 class CurrencyConverterResult(BaseModel):
     converted_amount: float; exchange_rate: float; timestamp: str; rate_source: str
+
+
+class IR35Request(BaseModel):
+    """Compare simplified 2025/26 inside and outside IR35 contractor outcomes.
+
+    Example: ``{"daily_rate_gbp": 500, "contract_duration_months": 12,
+    "days_worked_per_year": 220, "car_miles_per_year": 5000}``.
+    """
+    daily_rate_gbp: PositiveFloat = Field(le=100_000)
+    contract_duration_months: Literal[3, 6, 12] = 12
+    days_worked_per_year: int = Field(default=220, ge=1, le=366)
+    car_miles_per_year: float = Field(default=0, ge=0, le=1_000_000)
+    accountant_fees_per_year_gbp: float = Field(default=800, ge=0, le=1_000_000)
+    software_equipment_costs_per_year_gbp: float = Field(default=1_200, ge=0, le=1_000_000)
+
+
+class IR35InsideResult(BaseModel):
+    annual_gross_income: float; employer_national_insurance: float; pension_contribution: float
+    accountant_fees: float; software_equipment_costs: float; taxable_income: float; income_tax: float
+    employee_national_insurance: float; mileage_benefit: float; annual_net_take_home: float
+    monthly_net_take_home: float; contract_net_take_home: float; cost_to_company: float
+
+
+class IR35OutsideResult(BaseModel):
+    annual_gross_revenue: float; accountant_fees: float; software_equipment_costs: float
+    mileage_business_expense: float; taxable_profit: float; corporation_tax_rate_pct: float
+    corporation_tax: float; profit_after_corporation_tax: float; salary: float; dividends_before_tax: float
+    dividend_allowance: float; dividend_tax: float; mileage_benefit: float; annual_net_take_home: float
+    monthly_net_take_home: float; contract_net_take_home: float; cost_to_company: float
+
+
+class IR35Result(BaseModel):
+    daily_rate: float; days_worked_per_year: int; contract_duration_months: int
+    inside_ir35: IR35InsideResult; outside_ir35: IR35OutsideResult; annual_difference_outside_minus_inside: float
+    monthly_difference_outside_minus_inside: float; difference_percent: float; recommended_structure: str
+    assumptions: list[str]

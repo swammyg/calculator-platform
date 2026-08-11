@@ -145,3 +145,41 @@ def currency_converter(data: m.CurrencyConverterRequest) -> m.CurrencyConverterR
     """Convert via bundled indicative GBP cross-rates; no external FX request occurs."""
     rate = GBP_PER_UNIT[data.from_currency] / GBP_PER_UNIT[data.to_currency]
     return m.CurrencyConverterResult(converted_amount=round(data.amount * rate, 4), exchange_rate=round(rate, 6), timestamp=datetime.now(timezone.utc).isoformat(), rate_source="Indicative bundled rates")
+
+
+def ir35(data: m.IR35Request) -> m.IR35Result:
+    """Compare simplified annual inside-IR35 payroll and outside-IR35 company outcomes.
+
+    This deliberately uses the rates and simplified assumptions from the product
+    brief. It is an illustration only: real IR35 engagements can involve fee
+    payer deductions, employment allowance, expenses rules, and dividend bands
+    that require professional advice.
+    """
+    gross = data.daily_rate_gbp * data.days_worked_per_year
+    mileage = data.car_miles_per_year * 0.45
+    accountant = data.accountant_fees_per_year_gbp
+    software = data.software_equipment_costs_per_year_gbp
+
+    employer_ni = gross * 0.15
+    pension = gross * 0.08
+    inside_taxable = max(0.0, gross - employer_ni - pension - accountant - software)
+    income_tax = _progressive_tax(max(0.0, inside_taxable - 12_570), [(37_700, 0.20), (float("inf"), 0.40)])
+    employee_ni = max(0.0, min(inside_taxable, 50_270) - 12_570) * 0.08 + max(0.0, inside_taxable - 50_270) * 0.02
+    inside_net = gross - employer_ni - pension - accountant - software - income_tax - employee_ni + mileage
+
+    outside_profit = max(0.0, gross - accountant - software - mileage)
+    corporation_rate = 0.19 if outside_profit <= 250_000 else 0.25
+    corporation_tax = outside_profit * corporation_rate
+    post_corporation_tax = outside_profit - corporation_tax
+    salary = min(12_570.0, post_corporation_tax)
+    dividends = max(0.0, post_corporation_tax - salary)
+    dividend_allowance = min(500.0, dividends)
+    dividend_tax = max(0.0, dividends - dividend_allowance) * 0.0875
+    outside_net = salary + dividends - dividend_tax + mileage
+
+    contract_fraction = data.contract_duration_months / 12
+    difference = outside_net - inside_net
+    inside = m.IR35InsideResult(annual_gross_income=_money(gross), employer_national_insurance=_money(employer_ni), pension_contribution=_money(pension), accountant_fees=_money(accountant), software_equipment_costs=_money(software), taxable_income=_money(inside_taxable), income_tax=_money(income_tax), employee_national_insurance=_money(employee_ni), mileage_benefit=_money(mileage), annual_net_take_home=_money(inside_net), monthly_net_take_home=_money(inside_net / 12), contract_net_take_home=_money(inside_net * contract_fraction), cost_to_company=_money(gross))
+    outside = m.IR35OutsideResult(annual_gross_revenue=_money(gross), accountant_fees=_money(accountant), software_equipment_costs=_money(software), mileage_business_expense=_money(mileage), taxable_profit=_money(outside_profit), corporation_tax_rate_pct=corporation_rate * 100, corporation_tax=_money(corporation_tax), profit_after_corporation_tax=_money(post_corporation_tax), salary=_money(salary), dividends_before_tax=_money(dividends), dividend_allowance=_money(dividend_allowance), dividend_tax=_money(dividend_tax), mileage_benefit=_money(mileage), annual_net_take_home=_money(outside_net), monthly_net_take_home=_money(outside_net / 12), contract_net_take_home=_money(outside_net * contract_fraction), cost_to_company=_money(gross))
+    recommendation = "Outside IR35 (limited company)" if difference > 0 else "Inside IR35 (employee-like)" if difference < 0 else "Both structures produce the same estimate"
+    return m.IR35Result(daily_rate=_money(data.daily_rate_gbp), days_worked_per_year=data.days_worked_per_year, contract_duration_months=data.contract_duration_months, inside_ir35=inside, outside_ir35=outside, annual_difference_outside_minus_inside=_money(difference), monthly_difference_outside_minus_inside=_money(difference / 12), difference_percent=round(difference / inside_net * 100, 2) if inside_net else 0.0, recommended_structure=recommendation, assumptions=["Uses the addendum's simplified 2025/26 UK tax and NI rates.", "No student-loan repayment, VAT, pension relief, personal allowance taper, or higher-rate dividend tax is modelled.", "Mileage uses 45p per mile and is shown as a tax-free reimbursement benefit.", "Corporation tax is 19% up to £250,000 profit and 25% above that threshold; marginal relief is not modelled."])

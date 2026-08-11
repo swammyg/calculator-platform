@@ -1,4 +1,4 @@
-"""Routes for the eleven calculator products."""
+"""Routes for the calculator products."""
 from typing import Any, Callable, TypeVar
 
 from fastapi import APIRouter, Request
@@ -32,3 +32,4 @@ _register("/bmr-tdee", m.BMRTDEERequest, service.bmr_tdee, "Basal metabolic rate
 _register("/body-fat", m.BodyFatRequest, service.body_fat, "U.S. Navy body-fat estimate")
 _register("/loan", m.LoanRequest, service.loan, "Fixed-rate loan repayment")
 _register("/currency-converter", m.CurrencyConverterRequest, service.currency_converter, "Indicative currency conversion")
+_register("/ir35", m.IR35Request, service.ir35, "UK contractor inside versus outside IR35 estimate")
