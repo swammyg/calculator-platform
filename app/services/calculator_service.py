@@ -81,14 +81,19 @@ def personal_finance(data: m.PersonalFinanceRequest) -> m.PersonalFinanceResult:
 
 
 def b2b_roi(data: m.B2BROIRequest) -> m.B2BROIResult:
-    """Calculate undiscounted ROI and five-year discounted net present value."""
-    benefit = data.annual_revenue_increase_gbp + data.cost_savings_annual_gbp - data.maintenance_cost_annual_gbp
+    """Calculate an ROI case from direct inputs or a marketing growth funnel."""
+    annual_customers = data.monthly_leads * data.lead_to_customer_conversion_pct / 100 * 12 if data.calculation_method == "growth" else 0.0
+    revenue = annual_customers * data.average_customer_value_gbp if data.calculation_method == "growth" else data.annual_revenue_increase_gbp
+    gross_profit = revenue * data.gross_margin_pct / 100
+    annual_marketing = data.monthly_marketing_spend_gbp * 12
+    benefit = gross_profit + data.cost_savings_annual_gbp - annual_marketing - data.maintenance_cost_annual_gbp
     months = data.project_investment_gbp / benefit * 12 if benefit > 0 else None
     rate = data.discount_rate_pct / 100
     npv = -data.project_investment_gbp + sum(benefit / pow(1 + rate, year) for year in range(1, 6))
     roi = (benefit - data.project_investment_gbp) / data.project_investment_gbp * 100
     annual_roi = benefit / data.project_investment_gbp * 100
-    return m.B2BROIResult(project_investment=_money(data.project_investment_gbp), annual_benefit=_money(benefit), payback_period_months=data.payback_period_months, payback_period_years=round(data.payback_period_months / 12, 2), months_to_breakeven=round(months, 2) if months is not None else None, roi_percentage=round(roi, 2), net_present_value_5yr=_money(npv), cumulative_benefit_3yr=_money(benefit * 3), cumulative_benefit_5yr=_money(benefit * 5), annual_roi_percentage=round(annual_roi, 2))
+    growth = ((revenue - data.baseline_annual_revenue_gbp) / data.baseline_annual_revenue_gbp * 100) if data.baseline_annual_revenue_gbp else None
+    return m.B2BROIResult(project_investment=_money(data.project_investment_gbp), annual_benefit=_money(benefit), payback_period_months=data.payback_period_months, payback_period_years=round(data.payback_period_months / 12, 2), months_to_breakeven=round(months, 2) if months is not None else None, roi_percentage=round(roi, 2), net_present_value_5yr=_money(npv), cumulative_benefit_3yr=_money(benefit * 3), cumulative_benefit_5yr=_money(benefit * 5), annual_roi_percentage=round(annual_roi, 2), calculation_method=data.calculation_method, projected_annual_revenue=_money(revenue), projected_monthly_revenue=_money(revenue / 12), projected_annual_customers=round(annual_customers, 2), gross_profit_from_revenue=_money(gross_profit), annual_marketing_spend=_money(annual_marketing), baseline_annual_revenue=_money(data.baseline_annual_revenue_gbp), revenue_growth_percentage=round(growth, 2) if growth is not None else None)
 
 
 def healthcare_cost(data: m.HealthcareCostRequest) -> m.HealthcareCostResult:

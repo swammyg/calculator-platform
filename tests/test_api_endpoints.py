@@ -76,9 +76,25 @@ def test_calculator_boundary_and_zero_rate_cases(client: TestClient) -> None:
     assert zero_goal.json()["result"]["years_to_reach_goal"] == 0
 
 
+def test_b2b_roi_growth_mode_supports_a_pre_revenue_startup(client: TestClient) -> None:
+    """A zero-revenue startup can forecast ROI from an acquisition funnel."""
+    response = client.post("/api/v1/calculators/b2b-roi", json={"calculation_method": "growth", "project_investment_gbp": 10_000, "cost_savings_annual_gbp": 0, "baseline_annual_revenue_gbp": 0, "monthly_leads": 100, "lead_to_customer_conversion_pct": 2, "average_customer_value_gbp": 1_200, "gross_margin_pct": 70, "monthly_marketing_spend_gbp": 1_000})
+    assert response.status_code == 200, response.text
+    result = response.json()["result"]
+    assert result["projected_annual_customers"] == 24
+    assert result["projected_annual_revenue"] == 28_800
+    assert result["revenue_growth_percentage"] is None
+
+
+def test_b2b_roi_growth_mode_requires_a_complete_funnel(client: TestClient) -> None:
+    response = client.post("/api/v1/calculators/b2b-roi", json={"calculation_method": "growth", "project_investment_gbp": 10_000, "cost_savings_annual_gbp": 0})
+    assert response.status_code == 422
+    assert_validation_envelope(response.json())
+
+
 def test_ir35_calculator_includes_mileage_and_contract_duration(client: TestClient) -> None:
     """IR35 comparison returns detailed inside/outside results and scales contract totals."""
-    body = {"daily_rate_gbp": 500, "contract_duration_months": 6, "days_worked_per_year": 220, "car_miles_per_year": 1_000, "accountant_fees_per_year_gbp": 800, "software_equipment_costs_per_year_gbp": 1_200}
+    body = {"daily_rate_gbp": 500, "contract_duration_months": "6", "days_worked_per_year": 220, "car_miles_per_year": 1_000, "accountant_fees_per_year_gbp": 800, "software_equipment_costs_per_year_gbp": 1_200}
     response = client.post("/api/v1/calculators/ir35", json=body)
     assert response.status_code == 200, response.text
     result = response.json()["result"]

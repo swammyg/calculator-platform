@@ -4,7 +4,7 @@ All monetary values are in GBP unless a field explicitly names another currency.
 """
 from typing import Literal
 
-from pydantic import BaseModel, Field, PositiveFloat, model_validator
+from pydantic import BaseModel, Field, PositiveFloat, field_validator, model_validator
 
 
 class SalaryTaxRequest(BaseModel):
@@ -84,19 +84,40 @@ class PersonalFinanceResult(BaseModel):
 
 
 class B2BROIRequest(BaseModel):
-    """Example: ``{"project_investment_gbp": 10000, "annual_revenue_increase_gbp": 9000, "cost_savings_annual_gbp": 3000, "payback_period_months": 12}``."""
+    """Model either a direct business case or a lead-to-revenue growth campaign.
+
+    A zero baseline is valid for startups. In ``growth`` mode, annual revenue
+    is derived from monthly leads, conversion rate, and customer value.
+    """
+    calculation_method: Literal["direct", "growth"] = "direct"
     project_investment_gbp: PositiveFloat
-    annual_revenue_increase_gbp: float = Field(ge=0)
+    annual_revenue_increase_gbp: float = Field(default=0, ge=0)
     cost_savings_annual_gbp: float = Field(ge=0)
-    payback_period_months: int = Field(ge=1, le=1200, description="Business's expected payback period for comparison.")
+    payback_period_months: int = Field(default=12, ge=1, le=1200, description="Planning horizon used for legacy comparisons.")
     maintenance_cost_annual_gbp: float = Field(default=0, ge=0)
     discount_rate_pct: float = Field(default=10.0, ge=-99.99, le=1000)
+    baseline_annual_revenue_gbp: float = Field(default=0, ge=0)
+    monthly_leads: float = Field(default=0, ge=0, le=10_000_000)
+    lead_to_customer_conversion_pct: float = Field(default=0, ge=0, le=100)
+    average_customer_value_gbp: float = Field(default=0, ge=0, le=10_000_000)
+    gross_margin_pct: float = Field(default=100, ge=0, le=100)
+    monthly_marketing_spend_gbp: float = Field(default=0, ge=0, le=10_000_000)
+
+    @model_validator(mode="after")
+    def growth_inputs_are_meaningful(self) -> "B2BROIRequest":
+        if self.calculation_method == "growth" and (self.monthly_leads <= 0 or self.lead_to_customer_conversion_pct <= 0 or self.average_customer_value_gbp <= 0):
+            raise ValueError("growth mode requires monthly_leads, lead_to_customer_conversion_pct, and average_customer_value_gbp greater than zero")
+        if self.calculation_method == "direct" and self.annual_revenue_increase_gbp == 0 and self.cost_savings_annual_gbp == 0:
+            raise ValueError("direct mode requires an annual revenue increase or annual cost saving greater than zero")
+        return self
 
 
 class B2BROIResult(BaseModel):
     project_investment: float; annual_benefit: float; payback_period_months: int; payback_period_years: float
     months_to_breakeven: float | None; roi_percentage: float; net_present_value_5yr: float; cumulative_benefit_3yr: float
     cumulative_benefit_5yr: float; annual_roi_percentage: float
+    calculation_method: str; projected_annual_revenue: float; projected_monthly_revenue: float; projected_annual_customers: float
+    gross_profit_from_revenue: float; annual_marketing_spend: float; baseline_annual_revenue: float; revenue_growth_percentage: float | None
 
 
 class HealthcareCostRequest(BaseModel):
@@ -182,6 +203,12 @@ class IR35Request(BaseModel):
     car_miles_per_year: float = Field(default=0, ge=0, le=1_000_000)
     accountant_fees_per_year_gbp: float = Field(default=800, ge=0, le=1_000_000)
     software_equipment_costs_per_year_gbp: float = Field(default=1_200, ge=0, le=1_000_000)
+
+    @field_validator("contract_duration_months", mode="before")
+    @classmethod
+    def parse_contract_duration(cls, value: object) -> object:
+        """Accept HTML select values while retaining the three supported durations."""
+        return int(value) if isinstance(value, str) and value.isdigit() else value
 
 
 class IR35InsideResult(BaseModel):
