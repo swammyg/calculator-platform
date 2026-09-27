@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation - Kalko Calculator Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        body.dark { background: #0f172a; color: #e2e8f0; }
+
+        /* Header Styles */
+        header {
+            border-bottom: 1px solid #e2e8f0;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+        }
+        body.dark header { background: rgba(15, 23, 42, 0.9); border-bottom-color: #1e293b; }
+
+        .header-container {
+            max-width: 80rem;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: -0.025em;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .logo-icon { color: #4f46e5; }
+
+        nav {
+            display: flex;
+            gap: 1.25rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        body.dark nav { color: #cbd5e1; }
+
+        nav a {
+            color: inherit;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        nav a:hover { color: #4f46e5; }
+        body.dark nav a:hover { color: #818cf8; }
+
+        .header-right {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            padding: 0.5rem 1rem;
+            border: 1px solid #cbd5e1;
+            background: white;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        body.dark .theme-toggle { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+
+        .theme-toggle:hover { border-color: #4f46e5; }
+
+        /* Main Content */
+        .container { max-width: 56rem; margin: 0 auto; padding: 3rem 1.5rem; }
+
+        header h1 { font-size: 2.25rem; font-weight: 700; margin: 1rem 0; }
+        header p { margin-bottom: 1rem; color: #64748b; }
+        body.dark header p { color: #cbd5e1; }
+
+        h2 { font-size: 1.5rem; font-weight: 700; margin: 2rem 0 1rem; }
+        h3 { font-size: 1.125rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+        p { margin-bottom: 1rem; color: #64748b; }
+        body.dark p { color: #cbd5e1; }
+
+        .info-box {
+            background: #e0e7ff;
+            border-left: 4px solid #4f46e5;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0.5rem;
+        }
+        body.dark .info-box { background: #312e81; border-left-color: #818cf8; }
+
+        .info-box code {
+            background: rgba(79, 70, 229, 0.1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            background: #e2e8f0;
+            color: #475569;
+            transition: all 0.2s;
+        }
+        body.dark .filter-btn { background: #1e293b; color: #cbd5e1; }
+        .filter-btn.active { background: #4f46e5; color: white; }
+
+        .endpoint {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        body.dark .endpoint { background: #1e293b; border-color: #334155; }
+
+        .endpoint-header {
+            padding: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            transition: background 0.2s;
+        }
+        .endpoint-header:hover { background: #f1f5f9; }
+        body.dark .endpoint-header:hover { background: #0f172a; }
+
+        .endpoint-header-content { flex: 1; }
+        .method-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .method-post { background: #dcfce7; color: #166534; }
+        body.dark .method-post { background: #064e3b; color: #86efac; }
+
+        .endpoint-path {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+        body.dark .endpoint-path { color: #e2e8f0; }
+
+        .endpoint-summary { font-size: 0.875rem; color: #64748b; }
+        body.dark .endpoint-summary { color: #cbd5e1; }
+
+        .expand-icon {
+            font-size: 1.25rem;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        .expanded .expand-icon { transform: rotate(180deg); }
+
+        .endpoint-details {
+            display: none;
+            padding: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+        body.dark .endpoint-details { background: #0f172a; border-top-color: #334155; }
+        .endpoint.expanded .endpoint-details { display: block; }
+
+        .detail-section { margin-bottom: 1.5rem; }
+        .detail-section:last-child { margin-bottom: 0; }
+        .section-label { font-weight: 600; margin-bottom: 0.75rem; color: #1e293b; }
+        body.dark .section-label { color: #e2e8f0; }
+
+        .category-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #e2e8f0;
+            color: #475569;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        body.dark .category-badge { background: #334155; color: #cbd5e1; }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            position: relative;
+            margin: 0.75rem 0;
+        }
+        .code-block pre {
+            margin: 0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.875rem;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            background: #334155;
+            color: #cbd5e1;
+            border: none;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .copy-btn:hover { background: #475569; }
+
+        .note-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+        }
+        body.dark .note-box { background: #78350f; border-left-color: #fbbf24; color: #fcd34d; }
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        body.dark footer { border-top-color: #334155; color: #94a3b8; }
+
+        @media (max-width: 640px) {
+            .header-left { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+            nav { flex-direction: column; gap: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-container">
+            <div class="header-left">
+                <a href="https://kalko.uk/#/" class="logo">◈ <span class="logo-icon">Calculator</span></a>
+                <nav role="navigation" aria-label="Main menu">
+                    <a href="https://kalko.uk/#/">Calculator directory</a>
+                    <a href="https://kalko.uk/api-documentation.html">API documentation</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="theme-toggle" onclick="toggleDarkMode()" aria-label="Toggle colour theme">🌙 Dark</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h1>&lt;/&gt; API Documentation</h1>
+        <p>Comprehensive REST API reference for Calculator.app endpoints</p>
+        <div class="info-box">
+            <p><strong>Base URL:</strong> <code>https://api.kalko.uk</code></p>
+            <p style="margin-bottom: 0;"><strong>Authentication:</strong> None required for public endpoints. Rate limited to 120 requests per minute.</p>
+        </div>
+
+        <div class="controls">
+            <span style="font-weight: 600;">Filter by Category:</span>
+            <button class="filter-btn active" onclick="filterCategory('All')">All</button>
+            <button class="filter-btn" onclick="filterCategory('Finance')">Finance</button>
+            <button class="filter-btn" onclick="filterCategory('Personal')">Personal</button>
+            <button class="filter-btn" onclick="filterCategory('Health')">Health</button>
+            <button class="filter-btn" onclick="filterCategory('Time Tools')">Time Tools</button>
+            <button class="filter-btn" onclick="filterCategory('SEO Tools')">SEO Tools</button>
+        </div>
+
+        <div id="endpoints-container"></div>
+
+        <footer>
+            <p>Last updated: September 27, 2026</p>
+            <p>For issues or feedback, contact: <strong>georgesam@gmail.com</strong></p>
+        </footer>
+    </div>
+
+    <script>
+        const endpoints = [
+            { method: 'POST', path: '/api/v1/calculators/uk-salary-tax', summary: 'UK salary tax estimate (2024/25 bands)', description: 'Calculate UK income tax, National Insurance, pension contributions, and student loan deductions for the 2024/25 tax year.', category: 'Finance', request: { annual_salary_gbp: 60000, bonus_gbp: 5000, pension_contribution_pct: 5, is_scotland: false, student_loan: false }, response: { annual_gross_salary: 65000, income_tax: 11900, employee_national_insurance: 4748, employer_national_insurance: 7695, student_loan_repayment: 0, total_deductions: 16648, annual_take_home: 48352, monthly_take_home: 4029.33, effective_tax_rate_pct: 25.61 } },
+            { method: 'POST', path: '/api/v1/calculators/uk-mortgage', summary: 'UK repayment mortgage and SDLT estimate', description: 'Calculate monthly mortgage payments, stamp duty land tax (SDLT), council tax, insurance, and total housing costs.', category: 'Finance', request: { property_price_gbp: 350000, deposit_gbp: 70000, interest_rate_percent: 4.5, term_years: 25, property_tax_annual_gbp: 1800, insurance_annual_gbp: 300, maintenance_reserve_pct: 1 }, response: { property_price: 350000, deposit: 70000, loan_amount: 280000, stamp_duty_land_tax: 12500, monthly_mortgage_payment: 1414.5, total_interest_over_term: 145560 } },
+            { method: 'POST', path: '/api/v1/calculators/uk-pension', summary: 'UK pension projection', description: 'Project pension pot growth and estimate retirement income based on contributions, growth rate, and life expectancy.', category: 'Personal', request: { current_age: 35, retirement_age: 67, current_salary_gbp: 55000, current_pension_pot_gbp: 40000, annual_contribution_gbp: 4000, employer_contribution_pct: 5 }, response: { years_to_retirement: 32, projected_pension_pot_at_retirement: 1250000, annual_withdrawal_4pct: 37500, monthly_pension_income: 3125 } },
+            { method: 'POST', path: '/api/v1/calculators/uk-personal-finance', summary: 'UK personal finance and savings plan', description: 'Calculate monthly surplus and track progress toward savings goals.', category: 'Personal', request: { monthly_income_gbp: 4000, essential_expenses_gbp: 1800, discretionary_spending_gbp: 600, savings_goal_gbp: 30000 }, response: { monthly_surplus: 1600, months_to_goal: 18.75, annual_savings_rate_pct: 48 } },
+            { method: 'POST', path: '/api/v1/calculators/b2b-roi', summary: 'B2B investment ROI and NPV', description: 'Evaluate project returns, break-even point, and five-year net present value.', category: 'Finance', request: { project_investment_gbp: 10000, annual_revenue_increase_gbp: 9000, cost_savings_annual_gbp: 3000, payback_period_months: 12, discount_rate_pct: 10 }, response: { roi_year_one_pct: 115, five_year_npv: 35500, irr_pct: 87.3 } },
+            { method: 'POST', path: '/api/v1/calculators/uk-healthcare-cost', summary: 'Indicative UK private versus NHS healthcare costs', description: 'Compare private and NHS treatment costs including time-off-work impact.', category: 'Health', request: { procedure_type: 'cataract_surgery_private', private_insurance: false, recovery_weeks: 4, time_off_work_weeks: 2, weekly_income_gbp: 800 }, response: { nhs_cost: 0, private_cost: 3500, total_lost_income: 1600, patient_cost: 5100 } },
+            { method: 'POST', path: '/api/v1/calculators/bmi', summary: 'Body mass index', description: 'Calculate BMI and health category from height and weight.', category: 'Health', request: { weight_kg: 75, height_cm: 180, age: 35, gender: 'male' }, response: { bmi: 23.15, category: 'normal weight' } },
+            { method: 'POST', path: '/api/v1/calculators/bmr-tdee', summary: 'Basal metabolic rate and daily energy needs', description: 'Estimate BMR (calories at rest) and TDEE (total daily energy expenditure) based on activity level.', category: 'Health', request: { weight_kg: 75, height_cm: 180, age: 35, gender: 'male', activity_level: 'moderate' }, response: { bmr_kcal: 1750, tdee_kcal: 2625, activity_multiplier: 1.5 } },
+            { method: 'POST', path: '/api/v1/calculators/body-fat', summary: 'U.S. Navy body-fat estimate', description: 'Estimate body fat percentage using the U.S. Navy circumference method.', category: 'Health', request: { weight_kg: 75, height_cm: 180, age: 35, gender: 'male', neck_cm: 38, waist_cm: 84 }, response: { body_fat_pct: 18.5, lean_body_mass_kg: 61.2 } },
+            { method: 'POST', path: '/api/v1/calculators/loan', summary: 'Fixed-rate loan repayment', description: 'Calculate monthly payments and total interest for a fixed-rate loan.', category: 'Finance', request: { principal_usd: 10000, annual_rate_percent: 5, term_months: 36 }, response: { monthly_payment: 299.71, total_paid: 10789.56, total_interest: 789.56 } },
+            { method: 'POST', path: '/api/v1/calculators/currency-converter', summary: 'Indicative currency conversion', description: 'Convert between major currencies using bundled exchange rates.', category: 'Finance', request: { amount: 1000, from_currency: 'GBP', to_currency: 'USD' }, response: { converted_amount: 1280, rate: 1.28 } },
+            { method: 'POST', path: '/api/v1/tools/time/timezone-converter', summary: 'Convert time between IANA timezones', description: 'Convert a specific instant to multiple timezones and return current times for 200 IANA timezones.', category: 'Time Tools', request: { iso8601_instant: '2024-01-15T12:00:00Z', reference_timezone: 'Europe/London' }, response: { reference_time: '2024-01-15T12:00:00Z', timezones: [{ timezone: 'America/New_York', time: '2024-01-15T07:00:00' }] } },
+            { method: 'POST', path: '/api/v1/tools/time/age-calculator', summary: 'Calculate age and birthday countdown', description: 'Calculate age from ISO 8601 birth date, zodiac sign, and days until next birthday.', category: 'Time Tools', request: { birth_date_iso8601: '1990-05-15' }, response: { age_years: 33, zodiac_sign: 'Taurus', days_until_birthday: 119 } },
+            { method: 'POST', path: '/api/v1/tools/time/countdown-timer', summary: 'Calculate event countdown', description: 'Return human-readable time remaining until a future event.', category: 'Time Tools', request: { target_date_iso8601: '2024-12-25T00:00:00Z' }, response: { days_remaining: 344, human_readable: '344 days, 8 hours, 45 minutes' } },
+            { method: 'POST', path: '/api/v1/tools/seo/word-counter', summary: 'Count words, characters, and term frequency', description: 'Analyze text for word count, character count, and return case-insensitive frequency map.', category: 'SEO Tools', request: { text: 'The quick brown fox jumps over the lazy dog.' }, response: { word_count: 9, character_count: 44, unique_words: 8 } },
+            { method: 'POST', path: '/api/v1/tools/seo/readability-score', summary: 'Calculate textstat readability scores', description: 'Return six readability metrics (Flesch, Gunning Fog, etc.) and UK education level.', category: 'SEO Tools', request: { text: 'The quick brown fox jumps over the lazy dog.' }, response: { flesch_kincaid_grade: 3.5, flesch_reading_ease: 82.5, uk_education_level: 'Primary' } },
+            { method: 'POST', path: '/api/v1/tools/seo/keyword-density', summary: 'Analyse stemmed keyword frequency and density', description: 'Filter stop words and return stemmed top keywords with density percentages.', category: 'SEO Tools', request: { text: 'Machine learning algorithms help computers learn from data.', focus_keyword: 'machine learning' }, response: { focus_keyword_count: 1, focus_keyword_density_pct: 16.7, top_keywords: [{ keyword: 'learn', count: 2 }] } }
+        ];
+
+        let currentFilter = 'All';
+
+        function renderEndpoints() {
+            const container = document.getElementById('endpoints-container');
+            const filtered = currentFilter === 'All' ? endpoints : endpoints.filter(e => e.category === currentFilter);
+
+            container.innerHTML = filtered.map((endpoint, idx) => `
+                <div class="endpoint" data-category="${endpoint.category}">
+                    <div class="endpoint-header" onclick="toggleEndpoint(this)">
+                        <div class="endpoint-header-content">
+                            <div class="method-badge method-${endpoint.method.toLowerCase()}">${endpoint.method}</div>
+                            <div class="endpoint-path">${endpoint.path}</div>
+                            <div class="endpoint-summary">${endpoint.summary}</div>
+                        </div>
+                        <div class="expand-icon">▼</div>
+                    </div>
+                    <div class="endpoint-details">
+                        <div class="detail-section">
+                            <div class="section-label">Description</div>
+                            <p>${endpoint.description}</p>
+                        </div>
+                        <div class="detail-section">
+                            <div class="section-label">Category</div>
+                            <span class="category-badge">${endpoint.category}</span>
+                        </div>
+                        <div class="detail-section">
+                            <div class="section-label">Request Example</div>
+                            <div class="code-block">
+                                <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+                                <pre>${JSON.stringify(endpoint.request, null, 2)}</pre>
+                            </div>
+                        </div>
+                        <div class="detail-section">
+                            <div class="section-label">Response Example</div>
+                            <div class="code-block">
+                                <button class="copy-btn" onclick="copyCode(this)">📋 Copy</button>
+                                <pre>${JSON.stringify(endpoint.response, null, 2)}</pre>
+                            </div>
+                        </div>
+                        <div class="note-box">
+                            <strong>Note:</strong> All responses include <code>result</code>, <code>metadata</code> (timestamp, request ID), and <code>cached</code> (boolean) fields.
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleEndpoint(header) {
+            header.parentElement.classList.toggle('expanded');
+        }
+
+        function filterCategory(category) {
+            currentFilter = category;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            renderEndpoints();
+        }
+
+        function copyCode(btn) {
+            const code = btn.nextElementSibling.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.textContent = '✓ Copied';
+                setTimeout(() => btn.textContent = '📋 Copy', 2000);
+            });
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark'));
+        }
+
+        // Initialize
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark');
+        }
+        renderEndpoints();
+    </script>
+</body>
+</html>

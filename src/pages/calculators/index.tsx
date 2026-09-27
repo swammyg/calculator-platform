@@ -1,4 +1,5 @@
 import type { ToolDefinition } from "../../types";
+import { APIDocumentationPage } from "../APIDocumentationPage";
 import { B2BROIPage } from "./B2BROIPage";
 import { BMIPage } from "./BMIPage";
 import { BMRTDEEPage } from "./BMRTDEEPage";
@@ -33,7 +34,7 @@ const calculatorCategories = [
 ] as const;
 
 export function CalculatorsPage({ slug }: { slug?: string }): JSX.Element {
-  const pages: Record<string, JSX.Element> = { "uk-salary-tax": <UKSalaryTaxPage />, "uk-mortgage": <UKMortgagePage />, "uk-pension": <UKPensionPage />, "uk-personal-finance": <UKPersonalFinancePage />, "b2b-roi": <B2BROIPage />, "uk-healthcare-cost": <UKHealthcareCostPage />, bmi: <BMIPage />, "bmr-tdee": <BMRTDEEPage />, "body-fat": <BodyFatPage />, loan: <LoanPage />, "currency-converter": <CurrencyConverterPage /> };
+  const pages: Record<string, JSX.Element> = { "uk-salary-tax": <UKSalaryTaxPage />, "uk-mortgage": <UKMortgagePage />, "uk-pension": <UKPensionPage />, "uk-personal-finance": <UKPersonalFinancePage />, "b2b-roi": <B2BROIPage />, "uk-healthcare-cost": <UKHealthcareCostPage />, bmi: <BMIPage />, "bmr-tdee": <BMRTDEEPage />, "body-fat": <BodyFatPage />, loan: <LoanPage />, "currency-converter": <CurrencyConverterPage />, "api-documentation": <APIDocumentationPage /> };
   if (slug && pages[slug]) return pages[slug];
   return <section><p className="text-sm font-semibold uppercase tracking-widest text-indigo-600">Calculator.app</p><h1 className="mt-3 text-4xl font-bold tracking-tight">Make a confident next move.</h1><p className="mt-3 max-w-2xl text-slate-600 dark:text-slate-300">Choose a category, then use a calculator built around transparent assumptions.</p><div className="mt-10 grid gap-10">{calculatorCategories.map((category) => <section key={category.title} aria-labelledby={`${category.title.toLowerCase()}-calculators`}><div className="mb-4"><h2 id={`${category.title.toLowerCase()}-calculators`} className="text-2xl font-bold tracking-tight">{category.title} calculators</h2><p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{category.description}</p></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{category.slugs.map((slug) => { const calculator = calculators.find((item) => item.slug === slug); return calculator ? <a key={calculator.slug} href={`#/${calculator.slug}`} className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-indigo-400 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-800 dark:bg-slate-900"><h3 className="font-semibold">{calculator.title}</h3><p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{calculator.description}</p></a> : null; })}</div></section>)}</div></section>;
 }
