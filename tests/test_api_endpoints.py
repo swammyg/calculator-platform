@@ -19,6 +19,7 @@ CALCULATORS: list[tuple[str, dict[str, object], set[str]]] = [
     ("/body-fat", {"weight_kg": 70, "height_cm": 175, "age": 30, "gender": "male", "neck_cm": 38, "waist_cm": 84}, {"body_fat_percentage", "fat_mass_kg", "lean_mass_kg"}),
     ("/loan", {"principal_usd": 10_000, "annual_rate_percent": 5, "term_months": 36}, {"monthly_payment", "total_interest", "total_paid"}),
     ("/currency-converter", {"amount": 100, "from_currency": "GBP", "to_currency": "USD"}, {"converted_amount", "exchange_rate", "timestamp"}),
+    ("/ir35", {"daily_rate_gbp": 500, "contract_duration_months": 12, "days_worked_per_year": 220, "car_miles_per_year": 5_000, "accountant_fees_per_year_gbp": 800, "software_equipment_costs_per_year_gbp": 1_200}, {"inside_ir35", "outside_ir35", "annual_difference_outside_minus_inside", "recommended_structure"}),
 ]
 
 
@@ -56,6 +57,7 @@ def test_salary_known_50k_example_and_cached_response(client: TestClient) -> Non
     ("/body-fat", {"weight_kg": 70, "height_cm": 175, "age": 30, "gender": "male", "neck_cm": 40, "waist_cm": 40}),
     ("/loan", {"principal_usd": 1_000, "annual_rate_percent": -1, "term_months": 12}),
     ("/currency-converter", {"amount": 10, "from_currency": "DOGE", "to_currency": "GBP"}),
+    ("/ir35", {"daily_rate_gbp": -1, "contract_duration_months": 12}),
 ], ids=[item[0][1:] for item in CALCULATORS])
 def test_all_calculators_reject_invalid_inputs(client: TestClient, path: str, body: dict[str, object]) -> None:
     """Every calculator reports bad values with a structured 422 response."""
@@ -72,6 +74,33 @@ def test_calculator_boundary_and_zero_rate_cases(client: TestClient) -> None:
     assert zero_loan.json()["result"]["monthly_payment"] == 100
     assert large_currency.json()["result"]["converted_amount"] == 1_000_000_000
     assert zero_goal.json()["result"]["years_to_reach_goal"] == 0
+
+
+def test_b2b_roi_growth_mode_supports_a_pre_revenue_startup(client: TestClient) -> None:
+    """A zero-revenue startup can forecast ROI from an acquisition funnel."""
+    response = client.post("/api/v1/calculators/b2b-roi", json={"calculation_method": "growth", "project_investment_gbp": 10_000, "cost_savings_annual_gbp": 0, "baseline_annual_revenue_gbp": 0, "monthly_leads": 100, "lead_to_customer_conversion_pct": 2, "average_customer_value_gbp": 1_200, "gross_margin_pct": 70, "monthly_marketing_spend_gbp": 1_000})
+    assert response.status_code == 200, response.text
+    result = response.json()["result"]
+    assert result["projected_annual_customers"] == 24
+    assert result["projected_annual_revenue"] == 28_800
+    assert result["revenue_growth_percentage"] is None
+
+
+def test_b2b_roi_growth_mode_requires_a_complete_funnel(client: TestClient) -> None:
+    response = client.post("/api/v1/calculators/b2b-roi", json={"calculation_method": "growth", "project_investment_gbp": 10_000, "cost_savings_annual_gbp": 0})
+    assert response.status_code == 422
+    assert_validation_envelope(response.json())
+
+
+def test_ir35_calculator_includes_mileage_and_contract_duration(client: TestClient) -> None:
+    """IR35 comparison returns detailed inside/outside results and scales contract totals."""
+    body = {"daily_rate_gbp": 500, "contract_duration_months": "6", "days_worked_per_year": 220, "car_miles_per_year": 1_000, "accountant_fees_per_year_gbp": 800, "software_equipment_costs_per_year_gbp": 1_200}
+    response = client.post("/api/v1/calculators/ir35", json=body)
+    assert response.status_code == 200, response.text
+    result = response.json()["result"]
+    assert result["inside_ir35"]["mileage_benefit"] == 450
+    assert result["outside_ir35"]["mileage_business_expense"] == 450
+    assert result["inside_ir35"]["contract_net_take_home"] == round(result["inside_ir35"]["annual_net_take_home"] / 2, 2)
 
 
 TIME_TOOLS: list[tuple[str, dict[str, object], set[str]]] = [
